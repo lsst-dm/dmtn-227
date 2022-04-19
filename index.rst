@@ -2,8 +2,6 @@
 
 .. sectnum::
 
-.. TODO: Delete the note below before merging new content to the main branch.
-
 .. note::
 
    **This technote is a work-in-progress.**
@@ -52,6 +50,9 @@ All of this metadata is unified by its pertinence to a given image.
 However, the Standard Science Visit is composed of two "snap" images with the same telescope pointing that are processed together as if they made up one single exposure of twice the length.
 Accordingly, it makes sense to also summarize metadata by visit as well as raw image.
 If it turns out that all visits are composed of a single image, as specified in the Alternate Science Visit definition, then these two tables collapse to one.
+If other visit definitions (where combined image metadata makes sense, not just groupings of exposures for processing) end up being used, those could be stored in the same visit table or a parallel one, but this scenario seems unlikely at this point.
+Visit definition for this purpose needs to be consistent across all systems that use the metadata.
+For metadata about image groups that are not visits, :ref:`see below <general-dataset-metadata>` about general datasets.
 
 In addition, we often process images in a detector-parallel fashion.
 As each detector's image can be handled independently, and the available detectors could potentially change from image to image, having the ability to store metrics and metadata at the detector level is important.
@@ -97,7 +98,11 @@ Processing
 ----------
 
 Currently "visit summary tables" are prepared during Data Release processing.
-This information should be stored in the Consolidated Database, and it might make sense to retrieve it from there for use in downstream pipelines, but the pipeline Middleware has no provisions at present for obtaining datasets from a non-file data source.
+This information should be stored in the Consolidated Database.
+
+It might make sense to retrieve visit summary data from the Consolidated Database for use in downstream pipelines, but the pipeline Middleware has no provisions at present for obtaining datasets from a non-file data source.
+File exports from the Consolidated Database seem like a better way to retrieve this data, at least in the short term, even though it may be inefficient to scan through them and require more code to select the desired rows and columns.
+By using file exports, there is no question of synchronization of database inserts/updates and retrievals, provenance is simplified, and scalability is assured.
 
 External Services
 -----------------
@@ -126,11 +131,13 @@ Architecture
 ============
 
 For the ObsLocTAP service, which is specialized and distinct from other uses, a separate Summit database instance will be used.
-It appears that the Exposure Log service already provides this information.
+While the information content derives from the Scheduler, it appears that the Exposure Log service already compiles this information, so it may be a more suitable basis.
 The public TAP front-end for this database could be located in the cloud; it does not need to be Summit-resident.
 
 While conceptually a single globally-accessible image metadata database could be considered desirable, resilience and scalability require multiple, distributed, communicating database instances.
-In such a situation, the CAP theorem says that building such a system in a partition-tolerant manner means that only eventual consistency can be enforced.
+In such a situation, the `CAP theorem`_ says that building such a system in a partition-tolerant and highly-available manner means that only eventual consistency can be enforced.
+
+.. _CAP theorem: https://en.wikipedia.org/wiki/CAP_theorem
 
 The Data Release needs are slightly different in that they are almost entirely read-only, with very rare additions.
 Joining with the other Data Release tables in systems like Qserv is required.
@@ -143,15 +150,24 @@ In all cases, the database may need to be updated as different sources provide i
 At the Summit, replacement of data values seems appropriate.
 In the Data Release, maintaining history would be needed.
 At least some parts of the Data Release database would thus be bitemporal: the original raw numbers would always be available, and at least one revision of calibrated EFD summary data or other metadata would be available per DR.
+If this is difficult to store in the Data Release database itself, it may make sense to store the raw numbers and any previous revisions in an alternate, less readily-accessible form such as a change log or backup.
 
 Metadata is likely to contain wide fact tables with relatively limited dimensionality.
 There will be many, many columns of information for each image or visit, often with only a unique image/visit identifier as the primary key.
 
 I propose to have a hierarchical merge tree of databases.
+See :ref:`the diagram <fig-consolidation-of-databases>`.
+
+.. figure:: /_static/consolidation_of_databases.png
+   :name: fig-consolidation-of-databases
+   :target: ../_static/consolidation_of_databases.pdf
+
+   "Merge tree" of databases.
+
 The source systems at the Summit, including the EFD, will be summarized and merged into a Summit Visit Database that will include the previously-described Transformed EFD.
 The same summaries will be transmitted to the USDF where they will be included in the Consolidated Database, which will also merge information from offline sources such as Parquet files.
 Neither system will be the ultimate source of truth; they will be derived databases (too simple to be termed marts or warehouses) subject to update and correction.
-The Data Access Centers serve the Consolidated Database in conjunction with other Prompt data products as well as read-only snapshots of Data Release-relevant subsets (in particular, such subsets only include rows for visits and exposures that are part of the DR).
+The Data Access Centers serve read-only replicas of prompt-oriented column subsets of the Consolidated Database in conjunction with other Prompt data products as well as read-only snapshots of Data Release-relevant subsets (in particular, such subsets only include rows for visits and exposures that are part of the DR).
 The branches of this flow are one-way; no database communicates "upstream".
 
 To isolate implementation details from the users, interposing a REST API for updates in front of the low-level database implementation is desirable.
@@ -169,14 +185,15 @@ There are several concerns, however:
 #. We are currently planning to have different Butler repos with different Registry contents at each processing location.  The Consolidated Database, on the other hand, should be the same at each location.
 #. By extending the Registry beyond ingestion requirements, to include frequent updates asynchronous from dataset creation, it may add substantial complexity to the Butler.
 #. It may not be feasible to provide ObsCore and CAOM2 as views on the Registry; materialized derived tables may be necessary (e.g. to handle different requirements for specifying the geometry of regions).
-#. It is infeasible to insist that all information about a dataset that might potentially be used to select or exclude it from a processing graph be preloaded into the Registry.
+#. It is infeasible to insist that all information about a dataset that might potentially be used to select or exclude it from a processing graph be preloaded into the Registry in advance of knowing that it is needed for generating a particular graph.
    Some information may come from external systems and may only be known at graph generation time.
 
 If a way can be found to provide for Butler Registry-based graph generation while at the same time keeping the Consolidated Database outside the Butler domain, the overall system might be simplified and made more resilient.
 
-One mechanism for doing so might be to enable the Butler graph generation code to incorporate temporary lists of detector-exposures, exposures, detector-visits, or visits derived from the Consolidated Database.
+One mechanism for doing so might be to enable the Butler graph generation code to incorporate lists of detector-exposures, exposures, detector-visits, or visits derived from the Consolidated Database.
 For some uses, lists of groups of images might be useful.
-These lists could be explicit lists of primary key identifiers, or, if very large, could be implemented as boolean bit-columns.
+These lists could be explicit lists of primary key identifiers, or, if very large, could be implemented as boolean bit-columns; they could manifest as TAGGED collections in the Butler Registry.
+The lists would be presented to the Butler at graph generation time, not long in advance, but they could be persistent afterwards for provenance purposes.
 As long as WHERE clause conditions combining Registry-only columns and Consolidated Database-only columns are unnecessary (which seems likely, as the Consolidated Database should generally be a superset of the Registry), this should be adequate for filtering.
 By presenting a single, relatively narrow interface, the hope is that the graph generation code would require only limited changes.
 At the same time, the flexibility of data sources and filtering mechanisms available to the list generation tools is maximized.
@@ -205,6 +222,9 @@ So an RDBMS implementation with out-of-the-box SQL/ADQL and TAP seems possible, 
 MongoDB offers another possibility with a very flexible schema, although its document orientation may not be ideal.
 It does offer a number of index types that might be suitable, however, including a ``2dsphere`` type that could be used in addition to HTM/HEALpix indexing.
 
+Phasing
+-------
+
 A phased implementation could start with the urgently-needed Summit Visit Database, loading it with the contents of the Transformed EFD.
 If existing TICK stack tools are insufficient for doing this transformation, a modestly generalized framework based on the Header Service could do the summarization.
 Postgres would be the initial backend.
@@ -213,12 +233,20 @@ The next phase would be to replicate this to the USDF.
 Following that, the visit summary tables from DRP could be loaded.
 Additional data sources would be added as needed and as available.
 
-In parallel, the Middleware Team would work to allow Consolidated Database output lists to be used in graph generation and to allow dataset (``get()``) access to the Consolidated Database from pipelines.
+In parallel, the Middleware Team would work to allow Consolidated Database output lists to be used in graph generation.
+
+and to allow dataset (``get()``) access to the Consolidated Database from pipelines.
 
 An evaluation of database implementations would also be done at this time to determine if Postgres should be replaced by a different backend.
 
+.. _general_dataset_metadata:
+
+General Dataset Metadata
+------------------------
+
 Once a raw image metadata database is defined, it makes sense to ask whether it should be extended to also include other types of images, such as co-adds, or even other types of file datasets, such as catalogs.
 This is TBD and dependent on use cases.
+Among other concerns, scalability to the much larger space of all datasets, increased dimensionality and complexity of dataset identification, and complex relationships between datasets would seem to make this a non-trivial extension that requires further research.
 
 
 Transformed EFD
@@ -246,9 +274,9 @@ Note that QA metrics submitted to SQuaSH/Sasquatch via the lsst.verify interface
 The transformation and loading into the Summit Visit Database could occur by pulling from Kafka or InfluxDB.
 A plugin per channel would determine processing and could potentially be implemented in Kapacitor or InfluxDB's Flux language or a Kafka-level stream processor.
 The processor needs to know all relevant time boundaries for the exposure (and therefore visit):
- * startIntegration
- * startShutterOpen/endShutterOpen/startShutterClose/endShutterClose
- * endReadout
+ * ``startIntegration``
+ * ``startShutterOpen``/``endShutterOpen``/``startShutterClose``/``endShutterClose``
+ * ``endReadout``
 
 Summit Visit Database
 ---------------------
