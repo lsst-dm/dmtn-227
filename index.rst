@@ -158,9 +158,9 @@ There will be many, many columns of information for each image or visit, often w
 I propose to have a hierarchical merge tree of databases.
 See :ref:`the diagram <fig-consolidation-of-databases>`.
 
-.. figure:: /_static/consolidation_of_databases.png
+.. figure:: /_static/consolidation-of-databases.png
    :name: fig-consolidation-of-databases
-   :target: ../_static/consolidation_of_databases.pdf
+   :target: ../_static/consolidation-of-databases.pdf
 
    "Merge tree" of databases.
 
