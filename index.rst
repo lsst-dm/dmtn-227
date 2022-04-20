@@ -181,6 +181,7 @@ We currently have one database that tracks information about all datasets used f
 It would therefore seem reasonable to implement the Consolidated Database by extending that Registry database.
 
 There are several concerns, however:
+
 #. The schema may be more malleable than has previously been desired for the Butler Registry, with updates as new metrics are conceived, bitemporality, and instrument-specific columns.
 #. We are currently planning to have different Butler repos with different Registry contents at each processing location.  The Consolidated Database, on the other hand, should be the same at each location.
 #. By extending the Registry beyond ingestion requirements, to include frequent updates asynchronous from dataset creation, it may add substantial complexity to the Butler.
