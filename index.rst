@@ -122,7 +122,7 @@ They can instead be exposed via IVOA DataLink services.
 
 In addition to ObsCore, there is also the `CAOM2 data model`_ that is desirable to support as a *de facto* standard for released data products.
 
-.. _CAOM data model: http://www.opencadc.org/caom2/
+.. _CAOM2 data model: http://www.opencadc.org/caom2/
 
 The Consolidated Database schema needs to be mappable to both ObsCore and CAOM2.
 
