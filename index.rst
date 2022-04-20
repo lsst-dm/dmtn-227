@@ -19,7 +19,7 @@ As a result, we expect to deploy service-specific databases in Kubernetes, often
 One database instance that was to be part of the Consolidated Database has not been fully defined, however.
 That database contains raw image metadata for exposures and visits.
 Since the raw data product of the Observatory and its Camera is images, this metadata is critical for both operational processes and science understanding.
-This raw image metadata database has come to take on the name "Consolidated Database" as it potentially consolidates information from a variety of sources, including the full range from Summit systems to Data Release Production.
+This raw image metadata database has come to take on the name "Consolidated Database" as it potentially consolidates information from a variety of sources, including the full range from Summit systems to Data Release Production (DRP).
 This document proposes a specification for what the content of this database should be, how it should be managed, how it could be implemented, and how it might be extended.  A phased strategy for bringing it to production is also proposed.
 
 
@@ -165,7 +165,7 @@ See :ref:`the diagram <fig-consolidation-of-databases>`.
    "Merge tree" of databases.
 
 The source systems at the Summit, including the EFD, will be summarized and merged into a Summit Visit Database that will include the previously-described Transformed EFD.
-The same summaries will be transmitted to the USDF where they will be included in the Consolidated Database, which will also merge information from offline sources such as Parquet files.
+The same summaries will be transmitted to the US Data Facility (USDF) where they will be included in the Consolidated Database, which will also merge information from offline sources such as Parquet files.
 Neither system will be the ultimate source of truth; they will be derived databases (too simple to be termed marts or warehouses) subject to update and correction.
 The Data Access Centers serve read-only replicas of prompt-oriented column subsets of the Consolidated Database in conjunction with other Prompt data products as well as read-only snapshots of Data Release-relevant subsets (in particular, such subsets only include rows for visits and exposures that are part of the DR).
 The branches of this flow are one-way; no database communicates "upstream".
@@ -198,45 +198,54 @@ The lists would be presented to the Butler at graph generation time, not long in
 As long as WHERE clause conditions combining Registry-only columns and Consolidated Database-only columns are unnecessary (which seems likely, as the Consolidated Database should generally be a superset of the Registry), this should be adequate for filtering.
 By presenting a single, relatively narrow interface, the hope is that the graph generation code would require only limited changes.
 At the same time, the flexibility of data sources and filtering mechanisms available to the list generation tools is maximized.
-This is similar to what was proposed in DMTN-181 as part of Campaign Management.
+This is similar to what was proposed in `DMTN-181 <https://dmtn-181.lsst.io/>`_ as part of Campaign Management.
 
 Another alternative would be to build a more general join engine into graph generation that can perform queries across multiple data sources.
-While this may be overkill for small-scale usage of the Middleware, an engine like Presto/Trino could allow federation of a wide variety of sources while operating at LSST 10-year survey scales.
+While this may be overkill for small-scale usage of the Middleware, an engine like `Presto`_/`Trino`_ could allow federation of a wide variety of sources while operating at LSST 10-year survey scales.
 This could avoid multiple ingests into the Butler Registry.
 A potentially significant problem with this option is that InfluxDB, the primary repository of the EFD and lsst.verify-based metrics, does not have a Presto/Trino connector.
 But linking with a SQL-based Consolidated Database would be possible.
+
+.. _Presto: https://prestodb.io
+.. _Trino: https://trino.io
 
 
 Implementation
 ==============
 
 Given that indexing of most metadata is unlikely to produce selection ratios that are sufficiently low to offset the expense of seeks, a column store that can be rapidly scanned to select images or other datasets of interest seems like the most appropriate storage mechanism.
-Apache Cassandra might be appropriate, as it is already in use for the APDB and has good scalability and distribution capabilities.
+`Apache Cassandra`_ might be appropriate, as it is already in use for the APDB and has good scalability and distribution capabilities.
 In particular, it is conceivable to have a single distributed Cassandra that would include the Summit and the Data Facilities.
 Cassandra also provides the ability to add columns and column families more easily than a relational database.
+
+.. _Apache Cassandra: https://cassandra.apache.org/_/index.html
 
 Linking Cassandra with TAP might be difficult, however.
 In addition, the Consolidated Database for raw images is likely to have only 5 million or so rows at the visit level, 10 million or so rows at the exposure level, 2 billion or so at the detector-exposure level.
 Even with 1000 columns, this is only a few terabytes at most.
 So an RDBMS implementation with out-of-the-box SQL/ADQL and TAP seems possible, if it can be made to scale adequately.
 
-MongoDB offers another possibility with a very flexible schema, although its document orientation may not be ideal.
-It does offer a number of index types that might be suitable, however, including a ``2dsphere`` type that could be used in addition to HTM/HEALpix indexing.
+`MongoDB`_ offers another possibility with a very flexible schema, although its document orientation may not be ideal.
+It does offer a number of index types that might be suitable, however, including a "`2dsphere`_" type that could be used in addition to HTM/HEALpix indexing.
+
+.. _MongoDB: https://www.mongodb.com
+.. _2dsphere: https://www.mongodb.com/docs/manual/core/2dsphere/
 
 Phasing
 -------
 
 A phased implementation could start with the urgently-needed Summit Visit Database, loading it with the contents of the Transformed EFD.
-If existing TICK stack tools are insufficient for doing this transformation, a modestly generalized framework based on the Header Service could do the summarization.
+If existing `TICK stack`_ tools are insufficient for doing this transformation, a modestly generalized framework based on the `Header Service`_ could do the summarization.
 Postgres would be the initial backend.
+
+.. _TICK stack: https://www.influxdata.com/time-series-platform/
+.. _Header Service: https://dmtn-058.lsst.io
 
 The next phase would be to replicate this to the USDF.
 Following that, the visit summary tables from DRP could be loaded.
 Additional data sources would be added as needed and as available.
 
 In parallel, the Middleware Team would work to allow Consolidated Database output lists to be used in graph generation.
-
-and to allow dataset (``get()``) access to the Consolidated Database from pipelines.
 
 An evaluation of database implementations would also be done at this time to determine if Postgres should be replaced by a different backend.
 
@@ -254,11 +263,19 @@ Transformed EFD
 ---------------
 
 Columns in the Transformed EFD could potentially include all of the channels available in the EFD itself.
-Specifically desired columns include:
-"i) Time of exposure start and end, referenced to TAI, and DUT1; ii) Site metadata (site seeing, transparency, weather, observatory location); iii) Telescope metadata (telescope pointing, active optics state, environmental state); iv) Camera metadata (shutter trajectory, wavefront sensors, environmental state); v) Program metadata (identifier for main survey, deep drilling, etc.); and vi) Scheduler metadata (visitID, intended number of exposures in the visit)."
+Specifically desired columns mentioned in `LSE-61 DMS-REQ-0068`_ include:
+
+* Time of exposure start and end, referenced to TAI, and DUT1
+* Site metadata (site seeing, transparency, weather, observatory location)
+* Telescope metadata (telescope pointing, active optics state, environmental state)
+* Camera metadata (shutter trajectory, wavefront sensors, environmental state)
+* Program metadata (identifier for main survey, deep drilling, etc.)
+* Scheduler metadata (visitID, intended number of exposures in the visit)
+
+.. _LSE-61 DMS-REQ-0068: https://lse-61.lsst.io/LSE-61.pdf#page=18
 
 Basic information is already placed in the image header at exposure (boresight, exposure time, filter).
-Other information needs to be summarized from EFD information during exposure/visit (DIMM seeing, temps, weather)
+Other information needs to be summarized from EFD information during an exposure/visit (DIMM seeing, temps, weather).
 
 Only some metrics are composable from exposure to visit (i.e. the visit values are derivable directly from the exposure values for a two-exposure visit).
 Others need to be computed separately for exposures and visits.
@@ -270,7 +287,10 @@ For other channels that report raw values, a lookup table or other transformatio
 This table may of course change over time.
 
 Some channels are expected to be computed by Prompt Processing: astrometry, PSF, zeropoint, background, and QA metrics.
-Note that QA metrics submitted to SQuaSH/Sasquatch via the lsst.verify interface need to be distinguished between the real data and nightly/weekly test runs.
+Note that QA metrics submitted to `SQuaSH`_/`Sasquatch`_ via the lsst.verify interface need to be distinguished between the real data and nightly/weekly test runs.
+
+.. _SQuaSH: https://sqr-009.lsst.io
+.. _Sasquatch: https://sqr-067.lsst.io
 
 The transformation and loading into the Summit Visit Database could occur by pulling from Kafka or InfluxDB.
 A plugin per channel would determine processing and could potentially be implemented in Kapacitor or InfluxDB's Flux language or a Kafka-level stream processor.
