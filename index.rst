@@ -311,6 +311,7 @@ Consolidated Database
 
 The Consolidated Database at the USDF would include DRP-computed data (astrometry, photometry, metrics) including the current VisitSummary datasets as well as further annotations from processing metadata.
 This database would be replicated at the FrDF and UKDF for use during processing.
+
 .. Make in-text citations with: :cite:`bibkey`.
 .. Uncomment to use citations
 .. .. rubric:: References
