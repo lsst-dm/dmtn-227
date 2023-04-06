@@ -213,6 +213,16 @@ But linking with a SQL-based Consolidated Database would be possible.
 Implementation
 ==============
 
+Database 
+--------
+The Chile DevOps supported postgress instance will be used for this database. 
+Schema is defined in the schema repository allowing us to generate the SQL from the description in the repo. 
+Currently on 'u/ktl/add-summit-schema' branch of `SDM Schema repo <https://github.com/lsst/sdm_schemas/tree/main/yml>`
+
+
+Non relational thoughts
++++++++++++++++++++++++
+
 Given that indexing of most metadata is unlikely to produce selection ratios that are sufficiently low to offset the expense of seeks, a column store that can be rapidly scanned to select images or other datasets of interest seems like the most appropriate storage mechanism.
 `Apache Cassandra`_ might be appropriate, as it is already in use for the APDB and has good scalability and distribution capabilities.
 In particular, it is conceivable to have a single distributed Cassandra that would include the Summit and the Data Facilities.
@@ -226,10 +236,27 @@ Even with 1000 columns, this is only a few terabytes at most.
 So an RDBMS implementation with out-of-the-box SQL/ADQL and TAP seems possible, if it can be made to scale adequately.
 
 `MongoDB`_ offers another possibility with a very flexible schema, although its document orientation may not be ideal.
-It does offer a number of index types that might be suitable, however, including a "`2dsphere`_" type that could be used in addition to HTM/HEALpix indexing.
+It does offer a number of index types that might be suitable, however, including a "`2dsphere`_" type that could be used in addition to HTM/HEALPix indexing.
 
 .. _MongoDB: https://www.mongodb.com
 .. _2dsphere: https://www.mongodb.com/docs/manual/core/2dsphere/
+
+ConsDB Service
+--------------
+
+Initially A simple service is required this will:
+- be deployed using Phalanx
+- not, initially at least, be a CSC
+- listen to a limited number of CSC events around image capture
+- based on those events query the EFD to get information
+- write the gather information to the tables such as exposure log in the ConsDB
+- update appropriate table in ConsDB such as ObsLocTAP table to indicate an observation was made or not
+
+This will run in async and multi-threaded mode. Updates for example are not a high priority and should not delay the exposure entry creation.  Testing can use SQLLite implying we use SQL Alchemy (1.4 or higher). 
+
+We will commence work on this April 7 2023 in `cdb_service <https://github.com/lsst-dm/cdb_service>` repo. 
+
+There are further considerations below. 
 
 Phasing
 -------
