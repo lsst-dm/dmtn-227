@@ -254,7 +254,7 @@ Initially A simple service is required this will:
 
 This will run in async and multi-threaded mode. Updates for example are not a high priority and should not delay the exposure entry creation.  Testing can use SQLLite implying we use SQL Alchemy (1.4 or higher). 
 
-We will commence work on this April 7 2023 in `cdb_service <https://github.com/lsst-dm/cdb_service>` repo. 
+We will commence work on this April 7 2023 in `consdb  <https://github.com/lsst-dm/consdb.git>` repo. 
 
 There are further considerations below. 
 
