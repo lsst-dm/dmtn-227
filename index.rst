@@ -2,9 +2,20 @@
 
 .. sectnum::
 
-.. note::
+Abstract
+========
 
-   **This technote is a work-in-progress.**
+The Consolidated Database will hold information about all the images that have been taken.
+It fulfills the requirements [#metadata-reqs]_ to archive and serve metadata about the images.
+It also holds pre-computed per-exposure and per-visit summaries of the Engineering and Facility Database (EFD).
+It will not contain provenance or processing metadata about image data products, but metrics resulting from data processing will be stored in it.
+
+The Consolidated Database is required [#access-req]_ to be accessible via the IVOA TAP protocol.
+
+.. [#metadata-reqs] LSE-61 §1.2.3 DMS-REQ-0068, §4.1.4 DMS-REQ-0309; DPDD §3.1 p. 10, §3.3 footnote 30 p. 14, §4.1 p. 35, §4.3 p. 44
+.. [#access-req] LSE-61 §4.1.19 DMS-REQ-0078
+
+This document specifies what the content of this database should be, how it should be managed, how it will be implemented, and how it might be extended.  A phased strategy for bringing it to production is also proposed.
 
 Background
 ==========
@@ -16,11 +27,10 @@ Of course, centralizing so many services, some critical, creates requirements fo
 Today, administration of service-local database instances is relatively simple, and the benefits of distributing these to minimize side-effects outweigh management issues.
 As a result, we expect to deploy service-specific databases in Kubernetes, often of differing server technologies, whether for the Data Butler, TAP Schema, the Engineering and Facilities Database (EFD), the Alert Production Database, or Gafaelfawr.
 
-One database instance that was to be part of the Consolidated Database has not been fully defined, however.
+One database instance that was to be part of the original Consolidated Database has not been fully defined, however.
 That database contains raw image metadata for exposures and visits.
 Since the raw data product of the Observatory and its Camera is images, this metadata is critical for both operational processes and science understanding.
 This raw image metadata database has come to take on the name "Consolidated Database" as it potentially consolidates information from a variety of sources, including the full range from Summit systems to Data Release Production (DRP).
-This document proposes a specification for what the content of this database should be, how it should be managed, how it could be implemented, and how it might be extended.  A phased strategy for bringing it to production is also proposed.
 
 
 Raw Image Metadata
@@ -164,7 +174,7 @@ See :ref:`the diagram <fig-consolidation-of-databases>`.
 
    "Merge tree" of databases.
 
-The source systems at the Summit, including the EFD, will be summarized and merged into a Summit Visit Database that will include the previously-described Transformed EFD.
+The source systems at the Summit, including the HeaderService and the EFD, will be summarized and merged into a Summit Visit Database that will include the previously-described Transformed EFD.
 The same summaries will be transmitted to the US Data Facility (USDF) where they will be included in the Consolidated Database, which will also merge information from offline sources such as Parquet files.
 Neither system will be the ultimate source of truth; they will be derived databases (too simple to be termed marts or warehouses) subject to update and correction.
 The Data Access Centers serve read-only replicas of prompt-oriented column subsets of the Consolidated Database in conjunction with other Prompt data products as well as read-only snapshots of Data Release-relevant subsets (in particular, such subsets only include rows for visits and exposures that are part of the DR).
@@ -204,7 +214,7 @@ Another alternative would be to build a more general join engine into graph gene
 While this may be overkill for small-scale usage of the Middleware, an engine like `Presto`_/`Trino`_ could allow federation of a wide variety of sources while operating at LSST 10-year survey scales.
 This could avoid multiple ingests into the Butler Registry.
 A potentially significant problem with this option is that InfluxDB, the primary repository of the EFD and lsst.verify-based metrics, does not have a Presto/Trino connector.
-But linking with a SQL-based Consolidated Database would be possible.
+But joining with a SQL-based Consolidated Database that includes appropriate summaries of the EFD would be possible.
 
 .. _Presto: https://prestodb.io
 .. _Trino: https://trino.io
@@ -213,41 +223,18 @@ But linking with a SQL-based Consolidated Database would be possible.
 Implementation
 ==============
 
-Given that indexing of most metadata is unlikely to produce selection ratios that are sufficiently low to offset the expense of seeks, a column store that can be rapidly scanned to select images or other datasets of interest seems like the most appropriate storage mechanism.
-`Apache Cassandra`_ might be appropriate, as it is already in use for the APDB and has good scalability and distribution capabilities.
-In particular, it is conceivable to have a single distributed Cassandra that would include the Summit and the Data Facilities.
-Cassandra also provides the ability to add columns and column families more easily than a relational database.
+PostgreSQL relational databases will be used at the Summit and the USDF to implement the Consolidated Database.
+This enables the use of standard SQL for querying and the layering of TAP for science user access.
+While a column store or NoSQL document-oriented database could have some advantages, the use of separate normalized tables, potentially with materialized views joining them, can provide many of the same features.
 
-.. _Apache Cassandra: https://cassandra.apache.org/_/index.html
+The `Sasquatch`_ REST API will be used as the insertion interface between the source systems and the Consolidated database.
+This allows inserted data to be transformed into Kafka messages that are then replicated from the Summit to the USDF.
+Those Kafka messages will then trigger inserts or updates to the relational tables via a Kafka connector.
 
-Linking Cassandra with TAP might be difficult, however.
-In addition, the Consolidated Database for raw images is likely to have only 5 million or so rows at the visit level, 10 million or so rows at the exposure level, 2 billion or so at the detector-exposure level.
-Even with 1000 columns, this is only a few terabytes at most.
-So an RDBMS implementation with out-of-the-box SQL/ADQL and TAP seems possible, if it can be made to scale adequately.
+.. _Sasquatch: https://sqr-067.lsst.io
 
-`MongoDB`_ offers another possibility with a very flexible schema, although its document orientation may not be ideal.
-It does offer a number of index types that might be suitable, however, including a "`2dsphere`_" type that could be used in addition to HTM/HEALpix indexing.
-
-.. _MongoDB: https://www.mongodb.com
-.. _2dsphere: https://www.mongodb.com/docs/manual/core/2dsphere/
-
-Phasing
--------
-
-A phased implementation could start with the urgently-needed Summit Visit Database, loading it with the contents of the Transformed EFD.
-If existing `TICK stack`_ tools are insufficient for doing this transformation, a modestly generalized framework based on the `Header Service`_ could do the summarization.
-Postgres would be the initial backend.
-
-.. _TICK stack: https://www.influxdata.com/time-series-platform/
-.. _Header Service: https://dmtn-058.lsst.io
-
-The next phase would be to replicate this to the USDF.
-Following that, the visit summary tables from DRP could be loaded.
-Additional data sources would be added as needed and as available.
-
-In parallel, the Middleware Team would work to allow Consolidated Database output lists to be used in graph generation.
-
-An evaluation of database implementations would also be done at this time to determine if Postgres should be replaced by a different backend.
+Note that InfluxDB will *not* be used as the back-end.
+While the stream of exposures can conceptually be viewed as a time series, the labels of the exposures (exposure and visit ids) are not time-based and yet have high cardinality.
 
 .. _general_dataset_metadata:
 
@@ -287,23 +274,25 @@ For other channels that report raw values, a lookup table or other transformatio
 This table may of course change over time.
 
 Some channels are expected to be computed by Prompt Processing: astrometry, PSF, zeropoint, background, and QA metrics.
-Note that QA metrics submitted to `SQuaSH`_/`Sasquatch`_ via the lsst.verify interface need to be distinguished between the real data and nightly/weekly test runs.
+Note that QA metrics submitted to Sasquatch via the lsst.verify interface need to be distinguished between the real data and nightly/weekly test runs.
 
-.. _SQuaSH: https://sqr-009.lsst.io
-.. _Sasquatch: https://sqr-067.lsst.io
+The transformation will occur by doing periodic batch computations on defined time intervals, computing results for all visits ending within the interval.
+This allows for simple catch-up processing, recomputation at a different location (in particular at the USDF), and recomputation at a different time (e.g. if some channel summarization method were found to need adjustment).
+Stream-based processors might have lower latency, but they would not be as amenable to these recovery processes.
 
-The transformation and loading into the Summit Visit Database could occur by pulling from Kafka or InfluxDB.
-A plugin per channel would determine processing and could potentially be implemented in Kapacitor or InfluxDB's Flux language or a Kafka-level stream processor.
+A configuration item per channel would determine processing.
 The processor needs to know all relevant time boundaries for the exposure (and therefore visit):
  * ``startIntegration``
  * ``startShutterOpen``/``endShutterOpen``/``startShutterClose``/``endShutterClose``
  * ``endReadout``
 
+Not all channels need to be configured to be processed in every batch computation, allowing more-rapid updates of one or a few channels if need be.
+
+
 Summit Visit Database
 ---------------------
 
 The Summit Visit Database would include the Transformed EFD and additional annotations from observers obtained from the Exposure Log.
-(It's not clear whether annotations from the Narrative Log are suitable, and that might be merged with the Exposure Log anyway.)
 Metrics and results from the OCPS that are not part of the EFD and hence not transmitted via Kakfa can also be included at this stage.
 
 Consolidated Database
@@ -311,6 +300,72 @@ Consolidated Database
 
 The Consolidated Database at the USDF would include DRP-computed data (astrometry, photometry, metrics) including the current VisitSummary datasets as well as further annotations from processing metadata.
 This database would be replicated at the FrDF and UKDF for use during processing.
+
+
+First-Look Analysis and Feedback Functionality
+==============================================
+
+The `FAFF group report`_ points out the need for a Visit database.
+The Summit Visit Database and Consolidated Database described here are intended to fulfill that need.
+
+.. _FAFF group report:  https://sitcomtn-037.lsst.io/#the-visit-database
+
+The Summit Visit Database will be a subset of the Consolidated Database that contains information derived solely from Summit systems.
+It is appropriate for querying by other Summit systems that require near-realtime access to exposure and visit metadata.
+It is also an appropriate destination for exposure and visit metadata produced by Summit systems.
+
+The contents of the two instances will not in general be identical, even for the subset of the Consolidated Database that matches the Summit Visit Database.
+The Consolidated Database is designed to be an improved version of the Summit Visit Database, containing much more information, added seconds to years later.
+It is possible that some values or entries from the Summit Visit Database will be modified or updated in the Consolidated Database.
+But both instances are available to Summit observers and Commissioning staff.
+
+The use of the Sasquatch REST API will allow Rapid Analysis at the Summit to publish results into the Summit Visit Database, making them readily available after processing.
+It can also allow Camera diagnostics to be published to the same database.
+
+Using the same database server at the Summit as the current exposure and narrative log tools allows joins with their human annotations.
+Additional annotations relevant to processing rather than observing can be added to the exposure log at the USDF, which will be part of the Consolidated Database.
+
+The FAFF report describes a use case where Rapid Analysis produces a PSF FWHM which needs to be compared with the atmospheric seeing from DIMM data.
+It says that these values "originate from different sources, and are not precisely synced in time."
+But with the Transformed EFD component of the Summit Visit Database, the values from different sources would be combined in one database, and potentially even one table, and would, by definition, be synchronized in time (the time span of the exposure or visit).
+
+The `FAFF requirements spreadsheet`_ (FIG-REQ-024, row 77) suggests that users should be able to add additional fields to the Visit Database during the night.
+While schema changes can be handled by adding tables or columns to existing tables, such modifications would generally go through a change control process and not be highly dynamic.
+Among other reasons, removing columns or tables that might be relied upon by diverse and even non-Rubin downstream systems is difficult, so additions should be well-considered.
+It should be possible for systems to send arbitrary metrics and derived values to Sasquatch, however, with the only prerequisite being defining a topic name and schema for its values.
+At a later date, those values can be summarized into the Consolidated Database.
+
+.. _FAFF requirements spreadsheet: https://docs.google.com/spreadsheets/d/1bs0NNjYDLzWWENqnd_qtWWkj04gDML7ohQYnxGSwUZc/edit#gid=0
+
+
+Phasing
+=======
+
+We will start by loading the information from the Header Service into an initial Summit Visit Database co-located with the exposure log and narrative log.
+While there are limitations to the Header Service data, it is already summarized at the appropriate level and is available soon after the exposure readout begins.
+The Summit Visit Database will be replicated to the USDF along with the existing exposure log and narrative log replicas.
+This task is being worked on by DM and might take 2 weeks for KTL and WOM.
+
+In parallel, the connection from Sasquatch/Kafka to Postgres will be implemented.
+A `Kafka connector`_ already exists to do this, including the ability to do idempotent writes, so hopefully only configuration and deployment work will be needed.
+This will allow Rapid Analysis results and Camera metadata to be published into the Summit Visit Database.
+This task would benefit from SQuaRE expertise and might take 3 weeks for AF.
+
+.. _Kafka connector: https://docs.confluent.io/kafka-connectors/jdbc/current/sink-connector/overview.html
+
+After deployment of the connector at the USDF, Prompt Processing, "10 AM Processing", and DRP processing metrics can be incorporated into the Consolidated Database via this mechanism.
+Each publishing client team would need to modify their systems to publish appropriately.
+
+Next, the EFD transformation batch computation will be developed.
+This is also the component that will extract visit definitions from the OODS Butler repo and use them to produce the visit table(s).
+There are multiple sub-components that can be worked on here:
+ * the summarization framework
+ * the Butler integration to get exposure and visit timespans
+ * the various summarization algorithms
+ * the per-channel configuration selecting an algorithm and setting any parameters
+The whole task might take 2-3 engineer-months to complete.
+
+Meanwhile, the Middleware Team will work to allow Consolidated Database output lists to be used in graph generation.
 
 .. Make in-text citations with: :cite:`bibkey`.
 .. Uncomment to use citations
