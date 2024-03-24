@@ -1,6 +1,12 @@
-:tocdepth: 1
+###########################################
+The Consolidated Database of Image Metadata
+###########################################
 
-.. sectnum::
+.. abstract::
+
+   This document proposes a specification for what the content of an image metadata database should be, how it should be managed, how it could be implemented, and how it might be extended.  A phased strategy for bringing it to production is also proposed.
+
+
 
 Background
 ==========
@@ -69,7 +75,7 @@ Accordingly, it makes sense to also summarize metadata by visit as well as raw i
 If it turns out that all visits are composed of a single image, as specified in the Alternate Science Visit definition, then these two tables collapse to one.
 If other visit definitions (where combined image metadata makes sense, not just groupings of exposures for processing) end up being used, those could be stored in the same visit table or a parallel one, but this scenario seems unlikely at this point.
 Visit definition for this purpose needs to be consistent across all systems that use the metadata.
-For metadata about image groups that are not visits, :ref:`see below <general-dataset-metadata>` about general datasets.
+For metadata about image groups that are not visits, :ref:`see below <general_dataset_metadata>` about general datasets.
 
 In addition, we often process images in a detector-parallel fashion.
 As each detector's image can be handled independently, and the available detectors could potentially change from image to image, having the ability to store metrics and metadata at the detector level is important.
