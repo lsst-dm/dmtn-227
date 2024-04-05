@@ -12,9 +12,11 @@ For consitancy the schema file used at the base generated from Felis and post pr
 
 With Summit VPN connected:
 
- psql  -h postgresdb01.cp.lsst.org -U oods butler 
- butler=> \i summit-lattis.sql
- \q
+.. code-block::
+
+  psql  -h postgresdb01.cp.lsst.org -U oods butler 
+  butler=> \i summit-lattis.sql
+  \q
 
 
 

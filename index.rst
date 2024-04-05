@@ -355,6 +355,7 @@ Longer-Term
 
 .. include:: usdf.rst
 .. include:: summit.rst
+.. include:: felis.rst
 
 .. Make in-text citations with: :cite:`bibkey`.
 .. Uncomment to use citations
