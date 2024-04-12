@@ -5,7 +5,7 @@ Eventually Felis will do the complete creation of the schema directly.
 For now we are running it to produce a file. 
 That file is slightly processed and then used to create the schema in the different databases.
 
-Clone <git@github.com:lsst/felis.gitr> and install it with:
+Clone <git@github.com:lsst/felis.git> and install it with:
 
 .. code-block::
 
