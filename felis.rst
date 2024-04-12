@@ -32,6 +32,7 @@ Felis puts quotes on names which make them case sensitive in postgres; we remove
 
 
 Now we have the schema file we can use in any of the DBs.
+Note that the ``cdb_latiss`` schema is dropped and recreated by this script.
 
 
 
