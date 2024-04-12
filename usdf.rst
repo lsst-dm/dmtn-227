@@ -1,6 +1,6 @@
 Deployment at USDF
 ==================
-First the values file in Phalanx was created namely 'values-usdfprod.yaml <https://github.com/lsst-sqre/phalanx/blob/162905690a25309bc916f1304fc785c472f0e9ae/applications/consdb/values-usdf.yaml>'
+First the values file in Phalanx was created namely `values-usdfprod.yaml <https://github.com/lsst-sqre/phalanx/blob/63377b6ae3d8661589ebf4c019232982785c8ec6/applications/consdb/values-usdfprod.yaml>`
 
 Secret was created  in `the USDF vault <https://vault.slac.stanford.edu/ui/vault/secrets/secret/show/rubin/usdf-rsp/consdb>` with values from base.
 
