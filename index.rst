@@ -353,6 +353,10 @@ Longer-Term
 
 #. Augment CAOM and ObsCore tables as needed.
 
+.. include:: usdf.rst
+.. include:: summit.rst
+.. include:: felis.rst
+
 .. Make in-text citations with: :cite:`bibkey`.
 .. Uncomment to use citations
 .. .. rubric:: References
