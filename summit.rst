@@ -8,7 +8,7 @@ Secret added  in summit  vault 'summit-lsp/consdb <https://vault.lsst.cloud/ui/v
 
 Create Schema
 -------------
-For consitancy the schema file used at the base generated from Felis and post processed with KT's script was used.
+For consistency the schema file used at the base generated from Felis and post-processed with the ``post.sh`` script was used.
 
 With Summit VPN connected:
 
