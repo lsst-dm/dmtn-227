@@ -17,7 +17,7 @@ Clone 'git@github.com:lsst/sdm_schemas.git'
 The LATISS part of ConsDB schema is in 'yml/summit-latiss.yaml'.
 
 
-To produces the DDL run Felis in "dry-run" mode as follows:
+To produce the DDL run Felis in "dry-run" mode as follows:
 
 
 .. code-block::
