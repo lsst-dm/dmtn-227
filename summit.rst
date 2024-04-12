@@ -15,7 +15,7 @@ With Summit VPN connected:
 .. code-block::
 
   psql  -h postgresdb01.cp.lsst.org -U oods butler 
-  butler=> \i summit-lattis.sql
+  butler=> \i summit-latiss.sql
   \q
 
 
