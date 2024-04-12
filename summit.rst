@@ -2,7 +2,7 @@ Deployment at Summit
 ====================
 Set consdb to true in the phalanx environments values-summit.yaml.
 
-Created values file in Phalanx 'values-summit.yaml <https://github.com/lsst-sqre/phalanx/blob/162905690a25309bc916f1304fc785c472f0e9ae/applications/consdb/values-usdf.yaml>'
+Created values file in Phalanx `values-summit.yaml <https://github.com/lsst-sqre/phalanx/blob/63377b6ae3d8661589ebf4c019232982785c8ec6/applications/consdb/values-summit.yaml>`
 
 Secret added  in summit  vault 'summit-lsp/consdb <https://vault.lsst.cloud/ui/vault/secrets/secret/kv/k8s_operator%2Fsummit-lsp.lsst.codes%2Fconsdb/details?version=1> 
 
