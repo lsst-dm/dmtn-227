@@ -22,7 +22,7 @@ To produce the DDL run Felis in "dry-run" mode as follows:
 
 .. code-block::
 
-  Felis create-all --engine-url='postgresql://butler:nopass@postgresdb01:5432/butler' --dry-run yml/summit-latiss.yaml  >> tmp.sql
+  felis create-all --engine-url='postgresql://butler:nopass@postgresdb01:5432/butler' --dry-run yml/summit-latiss.yaml  >> tmp.sql
 
 Felis puts quotes on names which make them case sensitive in postgress - we remove those with:
 
