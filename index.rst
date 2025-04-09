@@ -207,6 +207,7 @@ The sources of data at the Summit will include:
 * Metrics from Rapid Analysis, via Sasquatch.
 
 The sources of data at the USDF will include:
+
 * The Exposure Log, augmented by campaign pilot and quality notes.
 * The Header Service and other LFA datasets, via the LFA replica.
 * Metrics from Rapid Analysis, via Sasquatch.
@@ -217,7 +218,7 @@ The sources of data at the USDF will include:
 
 .. figure:: /_static/consolidation-of-databases.png
    :name: fig-consolidation-of-databases
-   :target: ../_static/consolidation-of-databases.pdf
+   :target: _static/consolidation-of-databases.pdf
 
    Consolidation of databases.
 
