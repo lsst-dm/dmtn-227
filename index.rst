@@ -344,6 +344,12 @@ Medium-Term
 
 #. Generate TAP Schema from Felis and load, making ConsDB accessible from RSP.
 
+#. Dump the database to Parquet files for use by Data Release Production 
+
+#. Provide live logical replica of the database for data rights holders as part of the Prompt Products, 
+
+#. Load static snapshot of the database for data rights holders as part of Data Releases.  
+
 Longer-Term
 -----------
 
@@ -352,6 +358,8 @@ Longer-Term
 #. Load other LFA datasets if needed.
 
 #. Augment CAOM and ObsCore tables as needed.
+
+#. There may be a need for a tool to help make tagged collections or data id tables out of ConsDB query results.
 
 .. include:: usdf.rst
 .. include:: summit.rst
