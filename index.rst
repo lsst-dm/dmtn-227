@@ -345,11 +345,11 @@ Medium-Term
 
 #. Generate TAP Schema from Felis and load, making ConsDB accessible from RSP.
 
-#. Dump the database to Parquet files for use by Data Release Production 
+#. Dump the database to Parquet files for use by Data Release Production
 
-#. Provide live logical replica of the database for data rights holders as part of the Prompt Products, 
+#. Provide live logical replica of the database for data rights holders as part of the Prompt Products,
 
-#. Load static snapshot of the database for data rights holders as part of Data Releases.  
+#. Load static snapshot of the database for data rights holders as part of Data Releases.
 
 Longer-Term
 -----------
@@ -366,9 +366,8 @@ Longer-Term
 .. include:: summit.rst
 .. include:: felis.rst
 
-.. Make in-text citations with: :cite:`bibkey`.
-.. Uncomment to use citations
-.. .. rubric:: References
-.. 
-.. .. bibliography:: local.bib lsstbib/books.bib lsstbib/lsst.bib lsstbib/lsst-dm.bib lsstbib/refs.bib lsstbib/refs_ads.bib
-..    :style: lsst_aa
+
+References
+==========
+
+.. bibliography::
