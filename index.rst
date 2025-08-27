@@ -6,7 +6,7 @@ The Consolidated Database of Image Metadata
 
    This document proposes a specification for what the content of an image metadata database should be, how it should be managed, how it could be implemented, and how it might be extended.  A phased strategy for bringing it to production is also proposed.
 
-
+DOI: `10.71929/rubin/2586436 <https://doi.org/10.71929/rubin/2586436>`_
 
 Background
 ==========
@@ -16,7 +16,7 @@ By placing all of these instances on a single relational database management sys
 Of course, centralizing so many services, some critical, creates requirements for high availability and high performance, but Oracle Real Applications Clusters (RAC) was expected to meet those needs.
 
 Today, administration of service-local database instances is relatively simple, and the benefits of distributing these to minimize side-effects outweigh management issues.
-As a result, we expect to deploy service-specific databases in Kubernetes, often of differing server technologies, whether for the Data Butler, TAP Schema, the Engineering and Facilities Database (EFD), the Alert Production Database, or Gafaelfawr.
+As a result, we expect to deploy service-specific databases in Kubernetes, often of differing server technologies, whether for the Data Butler :cite:`2022SPIE12189E..11J`, TAP Schema, the Engineering and Facilities Database (EFD), the Alert Production Database, or `Gafaelfawr <https://gafaelfawr.lsst.io>`_.
 
 One database instance that was to be part of the Consolidated Database has not been fully defined, however.
 That database contains raw image metadata for exposures and visits.
@@ -37,8 +37,8 @@ Raw Image Metadata
 Raw image metadata includes information about the conditions under which the image was taken, such as timing, temperature and weather, filter, voltages, etc.
 Raw versions of this information are produced by Summit systems and published to the EFD.
 
-Previously, the `Transformed EFD`_ has been defined as the result of a service that will derive appropriate metadata for an image and publish it along with image identifiers.
-`A proposal`_ for how to do this transformation was drafted, but it is lacking at least one critical feature: relating the transformed data to raw images, rather than arbitrary time intervals.
+Previously, the `Transformed EFD`_ :cite:labelpar:`DMTN-050` has been defined as the result of a service that will derive appropriate metadata for an image and publish it along with image identifiers.
+`A proposal`_ :cite:labelpar:`SQR-058` for how to do this transformation was drafted, but it is lacking at least one critical feature: relating the transformed data to raw images, rather than arbitrary time intervals.
 
 .. _Transformed EFD: https://dmtn-050.lsst.io/#transformation
 .. _A proposal: https://sqr-058.lsst.io/
@@ -152,7 +152,7 @@ By using file exports, there is no question of synchronization of database inser
 External Services
 -----------------
 
-The IVOA defines two relevant data models: `Observation Data Model Core Components`_ (ObsCore), which is combined with `Table Access Protocol`_ (TAP) to form ObsTAP, describing observations that have occurred, and `Observation Locator Table Access Protocol`_ (ObsLocTAP), describing especially observations that are projected to occur in the future.
+The IVOA defines two relevant data models: `Observation Data Model Core Components`_ (ObsCore) :cite:`2017ivoa.spec.0509L`, which is combined with `Table Access Protocol`_ (TAP) :cite:`2019ivoa.spec.0927D` to form ObsTAP, describing observations that have occurred, and `Observation Locator Table Access Protocol`_ (ObsLocTAP) :cite:`2021ivoa.spec.0724S`, describing especially observations that are projected to occur in the future.
 We need to serve observation data according to both of these models.
 
 .. _Observation Data Model Core Components: https://www.ivoa.net/documents/ObsCore/20170509/index.html
@@ -163,7 +163,7 @@ While these are conceived of in the IVOA documents as separate, but linked, data
 However operational concerns (including frequent updates by the scheduler and maintaining a wall between public and data-rights-only information) make it fairly clear that these should be distinct.
 
 For ObsCore, we do not need to expose Butler component datasets in the metadata model.
-They can instead be exposed via IVOA DataLink services.
+They can instead be exposed via IVOA DataLink services :cite:`2023ivoa.spec.1215B`.
 
 In addition to ObsCore, there is also the `CAOM2 data model`_ that is desirable to support as a *de facto* standard for released data products.
 
@@ -253,7 +253,7 @@ The lists would be presented to the Butler at graph generation time, not long in
 As long as WHERE clause conditions combining Registry-only columns and Consolidated Database-only columns are unnecessary (which seems likely, as the Consolidated Database should generally be a superset of the Registry), this should be adequate for filtering.
 By presenting a single, relatively narrow interface, the hope is that the graph generation code would require only limited changes.
 At the same time, the flexibility of data sources and filtering mechanisms available to the list generation tools is maximized.
-This is similar to what was proposed in `DMTN-181 <https://dmtn-181.lsst.io/>`_ as part of Campaign Management.
+This is similar to what was proposed in `DMTN-181 <https://dmtn-181.lsst.io/>`_ :cite:labelpar:`DMTN-181` as part of Campaign Management.
 
 
 .. _general_dataset_metadata:
@@ -277,7 +277,7 @@ EFD Transformations
 -------------------
 
 Columns in the Transformed EFD could potentially include all of the channels available in the EFD itself.
-Specifically desired columns mentioned in `LSE-61 DMS-REQ-0068`_ include:
+Specifically desired columns mentioned in `LSE-61 DMS-REQ-0068`_ :cite:labelpar:`LSE-61` include:
 
 * Time of exposure start and end, referenced to TAI, and DUT1
 * Site metadata (site seeing, transparency, weather, observatory location)
@@ -301,7 +301,7 @@ For other channels that report raw values, a lookup table or other transformatio
 This table may of course change over time.
 
 Some channels are expected to be computed by Prompt Processing: astrometry, PSF, zeropoint, background, and QA metrics.
-Note that QA metrics submitted to `Sasquatch`_ via the lsst.verify interface need to be distinguished between the real data and nightly/weekly test runs.
+Note that QA metrics submitted to `Sasquatch`_ :cite:labelpar:`SQR-067` via the lsst.verify interface need to be distinguished between the real data and nightly/weekly test runs.
 
 .. _Sasquatch: https://sqr-067.lsst.io
 
@@ -345,11 +345,11 @@ Medium-Term
 
 #. Generate TAP Schema from Felis and load, making ConsDB accessible from RSP.
 
-#. Dump the database to Parquet files for use by Data Release Production 
+#. Dump the database to Parquet files for use by Data Release Production
 
-#. Provide live logical replica of the database for data rights holders as part of the Prompt Products, 
+#. Provide live logical replica of the database for data rights holders as part of the Prompt Products,
 
-#. Load static snapshot of the database for data rights holders as part of Data Releases.  
+#. Load static snapshot of the database for data rights holders as part of Data Releases.
 
 Longer-Term
 -----------
@@ -366,9 +366,8 @@ Longer-Term
 .. include:: summit.rst
 .. include:: felis.rst
 
-.. Make in-text citations with: :cite:`bibkey`.
-.. Uncomment to use citations
-.. .. rubric:: References
-.. 
-.. .. bibliography:: local.bib lsstbib/books.bib lsstbib/lsst.bib lsstbib/lsst-dm.bib lsstbib/refs.bib lsstbib/refs_ads.bib
-..    :style: lsst_aa
+
+References
+==========
+
+.. bibliography::
