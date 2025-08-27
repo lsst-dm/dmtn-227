@@ -6,7 +6,7 @@ The Consolidated Database of Image Metadata
 
    This document proposes a specification for what the content of an image metadata database should be, how it should be managed, how it could be implemented, and how it might be extended.  A phased strategy for bringing it to production is also proposed.
 
-
+DOI: `10.71929/rubin/2586436 <https://doi.org/10.71929/rubin/2586436>`_
 
 Background
 ==========
