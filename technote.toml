@@ -4,6 +4,7 @@ series_id = "DMTN"
 canonical_url = "https://dmtn-227.lsst.io/"
 github_url = "https://github.com/lsst-dm/dmtn-227"
 github_default_branch = "main"
+date_created = 2022-04-18T19:11:27
 organization.name = "Vera C. Rubin Observatory"
 organization.ror = "https://ror.org/048g3cy84"
 license.id = "CC-BY-4.0"
